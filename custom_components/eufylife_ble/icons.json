@@ -1,0 +1,45 @@
+{
+  "entity": {
+    "sensor": {
+      "heart_rate": {
+        "default": "mdi:heart-pulse"
+      },
+      "real_time_weight": {
+        "default": "mdi:scale-bathroom"
+      },
+      "weight": {
+        "default": "mdi:scale-bathroom"
+      },
+      "impedance": {
+        "default": "mdi:flash"
+      },
+      "body_fat": {
+        "default": "mdi:percent"
+      },
+      "muscle_mass": {
+        "default": "mdi:arm-flex"
+      },
+      "bone_mass": {
+        "default": "mdi:bone"
+      },
+      "water_percentage": {
+        "default": "mdi:water-percent"
+      },
+      "visceral_fat": {
+        "default": "mdi:stomach"
+      },
+      "bmi": {
+        "default": "mdi:human"
+      },
+      "bmr": {
+        "default": "mdi:fire"
+      },
+      "metabolic_age": {
+        "default": "mdi:timer-sand"
+      },
+      "protein_percentage": {
+        "default": "mdi:food-steak"
+      }
+    }
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Device is already configured",
+      "already_in_progress": "Configuration flow is already in progress",
+      "no_devices_found": "No devices found",
+      "not_supported": "Device not supported"
+    },
+    "flow_title": "{name}",
+    "step": {
+      "bluetooth_confirm": {
+        "description": "Do you want to set up {name}?"
+      },
+      "user": {
+        "data": {
+          "address": "Device"
+        },
+        "description": "Choose a device to set up"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Manage profiles",
+        "description": "Each profile tracks body composition for one person. The scale routes a measurement to the matching profile based on the configured weight range.",
+        "data": {
+          "action": "What would you like to do?"
+        }
+      },
+      "add_profile": {
+        "title": "Add profile (1/3) — Basic info",
+        "description": "Enter the person's information and choose your preferred units.",
+        "data": {
+          "profile_name": "Name",
+          "user_age": "Age",
+          "user_sex": "Sex",
+          "height_unit": "Height unit",
+          "weight_unit": "Weight unit"
+        }
+      },
+      "add_profile_height": {
+        "title": "Add profile (2/3) — Height",
+        "data": {
+          "user_height": "Height",
+          "height_ft": "Feet",
+          "height_in": "Inches"
+        }
+      },
+      "add_profile_range": {
+        "title": "Add profile (3/3) — Weight range",
+        "description": "Set the weight range that identifies this person's measurements. Body composition will only be calculated when the measured weight falls within this range.",
+        "data": {
+          "weight_min": "Minimum weight",
+          "weight_max": "Maximum weight"
+        }
+      },
+      "manage_profiles": {
+        "title": "Select a profile",
+        "description": "Choose the profile you want to edit or delete.",
+        "data": {
+          "profile_id": "Profile"
+        }
+      },
+      "edit_profile": {
+        "title": "Edit profile (1/3) — Basic info",
+        "description": "Update the profile information. If you change the weight unit, the weight range will be converted automatically. Check 'Delete this profile' to remove it.",
+        "data": {
+          "profile_name": "Name",
+          "user_age": "Age",
+          "user_sex": "Sex",
+          "height_unit": "Height unit",
+          "weight_unit": "Weight unit",
+          "delete_profile": "Delete this profile"
+        }
+      },
+      "edit_profile_height": {
+        "title": "Edit profile (2/3) — Height",
+        "description": "Verify or update the height. Values are pre-filled from the stored height.",
+        "data": {
+          "user_height": "Height",
+          "height_ft": "Feet",
+          "height_in": "Inches"
+        }
+      },
+      "edit_profile_range": {
+        "title": "Edit profile (3/3) — Weight range",
+        "description": "Verify the weight range. Values have been converted automatically if you changed the unit.",
+        "data": {
+          "weight_min": "Minimum weight",
+          "weight_max": "Maximum weight"
+        }
+      }
+    },
+    "error": {
+      "name_required": "Profile name cannot be empty."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "heart_rate": {
+        "name": "Heart rate"
+      },
+      "real_time_weight": {
+        "name": "Real-time weight"
+      },
+      "weight": {
+        "name": "Weight"
+      },
+      "impedance": {
+        "name": "Impedance"
+      }
+    }
+  }
+}
