@@ -3,14 +3,17 @@
 Subclasses EufyLifeBLEDevice to extract bioelectrical impedance data
 that the upstream library ignores:
 
-- T9150 (P3): impedance from advertisement data body-comp packets
+- T9150 (P3): impedance from advertisement body-comp packets
   (data[10] & 0x20), bytes 17-18 as uint16 LE / 10 = Ohms.
-- T9148/T9149 (P2/P2 Pro): impedance from GATT notification bytes 8-10
-  as a 24-bit value (code commented out in upstream client.py line 355).
+- T9148/T9149 (P2/P2 Pro): impedance from BLE advertisement bytes 16-17
+  as uint16 LE, direct Ohms (no divisor). Empirically validated from
+  T9149 logs: 305-306 Ω across two sessions.
 
-BETA WARNING: Impedance byte positions and scaling factors are based on
-reverse engineering (PR #11 for T9150, commented code for T9148). These
-need empirical validation.
+Advertisement packet format for T9148/T9149 (19 bytes):
+  d[7]     = heart rate (bpm) when d[8] == 0xC0, else status
+  d[9,10]  = weight (uint16 LE, /100 = kg)  — handled by upstream lib
+  d[15]    = 0x00 → final reading,  0x01 → measuring
+  d[16,17] = impedance (uint16 LE, direct Ohms), 0 if not yet measured
 """
 
 from __future__ import annotations
@@ -91,11 +94,59 @@ class EufyLifeBLEDeviceExtended(EufyLifeBLEDevice):
     def update_state_from_advertisement_data(
         self, advertisement_data: AdvertisementData
     ) -> None:
-        """Update state from advertisement data, with body-comp support for T9150."""
+        """Update state from advertisement data.
+
+        - T9150: full custom handler (weight + impedance + HR from body-comp packets)
+        - T9148/T9149: upstream handles weight + HR; we add impedance extraction
+        - Others: delegate entirely to upstream
+        """
         if self._model_id == "eufy T9150":
             self._handle_t9150_advertisement(advertisement_data)
+        elif self._model_id in ["eufy T9148", "eufy T9149"]:
+            # Upstream library already extracts weight and heart rate correctly.
+            # We call it first, then extract impedance from the same packet.
+            super().update_state_from_advertisement_data(advertisement_data)
+            self._extract_t9148_t9149_impedance(advertisement_data)
         else:
             super().update_state_from_advertisement_data(advertisement_data)
+
+    def _extract_t9148_t9149_impedance(
+        self, advertisement_data: AdvertisementData
+    ) -> None:
+        """Extract impedance from T9148/T9149 BLE advertisement packets.
+
+        Empirically validated packet format (19 bytes):
+          d[15]    = 0x00 → final reading
+          d[16,17] = impedance in Ohms (uint16 LE), 0 if not yet measured
+
+        The upstream library handles weight and heart rate; this method
+        only extracts the impedance that the upstream ignores.
+        """
+        manufacturer_data = advertisement_data.manufacturer_data
+        if not manufacturer_data:
+            return
+
+        for data in manufacturer_data.values():
+            if len(data) < 18:
+                continue
+
+            is_final = data[15] == 0x00
+            if not is_final:
+                continue
+
+            raw_impedance = data[16] | (data[17] << 8)
+            if raw_impedance == 0:
+                # First final packet often has impedance = 0; wait for next
+                continue
+
+            impedance_ohms = float(raw_impedance)
+            self._impedance = impedance_ohms
+            self._impedance_final = impedance_ohms
+            _LOGGER.debug(
+                "T9148/T9149 impedance from advertisement: %d Ohms", raw_impedance
+            )
+            self._fire_extended_callbacks()
+            break
 
     def _handle_t9150_advertisement(
         self, advertisement_data: AdvertisementData
