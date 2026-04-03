@@ -95,8 +95,10 @@ async def async_setup_entry(
     """Set up the EufyLife sensors."""
     data = entry.runtime_data
 
+    profiles = _get_profiles(entry)
+
     entities: list[SensorEntity] = [
-        EufyLifeWeightSensorEntity(data),
+        EufyLifeWeightSensorEntity(data, profiles),
         EufyLifeRealTimeWeightSensorEntity(data),
     ]
 
@@ -108,7 +110,6 @@ async def async_setup_entry(
         entities.append(EufyLifeImpedanceSensorEntity(data))
 
     # Add one set of body composition sensors per configured profile
-    profiles = _get_profiles(entry)
     if profiles and data.client.supports_body_composition:
         for pc in profiles:
             entities.extend([
@@ -196,10 +197,11 @@ class EufyLifeWeightSensorEntity(RestoreSensor, EufyLifeSensorEntity):
     _attr_native_unit_of_measurement = UnitOfMass.KILOGRAMS
     _attr_device_class = SensorDeviceClass.WEIGHT
 
-    def __init__(self, data: EufyLifeData) -> None:
+    def __init__(self, data: EufyLifeData, profiles: list[ProfileConfig]) -> None:
         """Initialize the weight sensor entity."""
         super().__init__(data)
         self._attr_unique_id = f"{data.address}_weight"
+        self._profiles = profiles
 
     @property
     def available(self) -> bool:
@@ -213,13 +215,25 @@ class EufyLifeWeightSensorEntity(RestoreSensor, EufyLifeSensorEntity):
             return UnitOfMass.POUNDS
         return UnitOfMass.KILOGRAMS
 
+    def _matches_any_profile(self, weight_kg: float) -> bool:
+        """Return True if weight falls within at least one configured profile's range."""
+        if not self._profiles:
+            return True
+        for pc in self._profiles:
+            measured = weight_kg * KG_TO_LBS if pc.weight_unit == WEIGHT_UNIT_LBS else weight_kg
+            if pc.weight_min <= measured <= pc.weight_max:
+                return True
+        return False
+
     @callback
     def _handle_state_update(self, *args: Any) -> None:
-        """Handle state update."""
+        """Handle state update, ignoring weights outside all configured profile ranges."""
         state = self._data.client.state
         if state is not None and state.final_weight_kg is not None:
-            self._attr_native_value = state.final_weight_kg
-        super()._handle_state_update(args)
+            if self._matches_any_profile(state.final_weight_kg):
+                self._attr_native_value = state.final_weight_kg
+                self.async_write_ha_state()
+        # Do NOT call super() here — we only write state when weight is accepted
 
     async def async_added_to_hass(self) -> None:
         """Register callback."""
@@ -228,7 +242,13 @@ class EufyLifeWeightSensorEntity(RestoreSensor, EufyLifeSensorEntity):
         last_sensor_data = await self.async_get_last_sensor_data()
         if not last_state or not last_sensor_data or last_state.state in IGNORED_STATES:
             return
-        self._attr_native_value = last_sensor_data.native_value
+        # Only restore if the previously recorded weight matches a configured profile
+        try:
+            last_kg = float(last_sensor_data.native_value)
+        except (TypeError, ValueError):
+            return
+        if self._matches_any_profile(last_kg):
+            self._attr_native_value = last_sensor_data.native_value
 
 
 class EufyLifeHeartRateSensorEntity(RestoreSensor, EufyLifeSensorEntity):
